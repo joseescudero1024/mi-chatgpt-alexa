@@ -1,13 +1,9 @@
 {
-    "name": "alexa-chatgpt",
+    "name": "mi-chatgpt-alexa",
     "version": "1.0.0",
     "main": "index.js",
+    "type": "module",
     "scripts": {
       "start": "node index.js"
-    },
-    "dependencies": {
-      "express": "^4.18.2",
-      "node-fetch": "^2.6.7",
-      "body-parser": "^1.20.2"
     }
   }
