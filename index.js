@@ -5,12 +5,20 @@ const fetch = require("node-fetch");
 const app = express();
 app.use(bodyParser.json());
 
-// ⚠️ NO pongas tu API aquí directamente en producción
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// 🧠 Memoria simple por sesión
+let conversationHistory = [];
 
 app.post("/", async (req, res) => {
     try {
-        const userText = req.body.request.intent.slots.text.value;
+        const userText = req.body?.request?.intent?.slots?.text?.value || "Hola";
+
+        // 🧠 Guardar historial (limitado a últimas 10 interacciones)
+        conversationHistory.push({ role: "user", content: userText });
+        if (conversationHistory.length > 10) {
+            conversationHistory.shift();
+        }
 
         const response = await fetch("https://api.openai.com/v1/responses", {
             method: "POST",
@@ -20,7 +28,13 @@ app.post("/", async (req, res) => {
             },
             body: JSON.stringify({
                 model: "gpt-4o-mini",
-                input: userText
+                input: [
+                    {
+                        role: "system",
+                        content: "Responde siempre en español, de forma clara, natural y conversacional."
+                    },
+                    ...conversationHistory
+                ]
             })
         });
 
@@ -28,12 +42,16 @@ app.post("/", async (req, res) => {
 
         const reply = data.output?.[0]?.content?.[0]?.text || "No entendí la respuesta";
 
+        // 🧠 Guardar respuesta del bot
+        conversationHistory.push({ role: "assistant", content: reply });
+
+        // 🔊 Respuesta con voz más natural (SSML)
         res.json({
             version: "1.0",
             response: {
                 outputSpeech: {
-                    type: "PlainText",
-                    text: reply
+                    type: "SSML",
+                    ssml: `<speak>${reply}</speak>`
                 },
                 shouldEndSession: false
             }
@@ -46,7 +64,7 @@ app.post("/", async (req, res) => {
             response: {
                 outputSpeech: {
                     type: "PlainText",
-                    text: "Hubo un error"
+                    text: "Hubo un error al procesar la solicitud"
                 },
                 shouldEndSession: true
             }
@@ -54,6 +72,5 @@ app.post("/", async (req, res) => {
     }
 });
 
-// Puerto dinámico para Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Servidor corriendo"));
